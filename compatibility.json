@@ -1,6 +1,6 @@
 {
   "project": "titanfall2mod_no_body_no_reload",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "required_mod": "CircuitLord Titanfall2VR",
   "required_mod_version": "1.0.25",
   "installer_reference_version": "1.2.12",

@@ -2,6 +2,10 @@
 
 Add-on non ufficiale di **jshodanVR** per la campagna VR di Titanfall 2.
 
+**Qui non è incluso l'installer di CircuitLord, né alcun suo eseguibile, DLL o asset. `Install.cmd` è soltanto il patcher di questo add-on: non installa e non scarica la mod VR base.**
+
+La mod base deve essere ottenuta e installata separatamente dal **[GitHub ufficiale di CircuitLord](https://github.com/CircuitLord/CircuitLordVRModInstaller)**.
+
 - Ripristina la ricarica gestita dal gioco, senza dover inserire il caricatore o azionare l'otturatore a mano in VR.
 - Nasconde il corpo del pilota lasciando visibili mani, armi e oggetti.
 - Chiude e rifinisce i polsi delle mani, senza i lembi elastici del primo prototipo.
@@ -14,15 +18,13 @@ Add-on non ufficiale di **jshodanVR** per la campagna VR di Titanfall 2.
 | --- | --- |
 | **Mod base obbligatoria: CircuitLord Titanfall2VR** | **1.0.25, canale stabile** |
 | Installer ufficiale di riferimento: CircuitLordVRModInstaller | **1.2.12** |
-| Questo add-on | 1.0.0 |
+| Questo add-on | 1.0.1 |
 
 **1.0.25 è la versione della mod VR; 1.2.12 è la versione del programma che la installa. Sono due numeri diversi.** Usare l'installer 1.2.12 non garantisce da solo che sia installata la mod corretta: selezionare Titanfall2VR 1.0.25 e controllare la versione effettivamente installata.
 
 Installare prima il gioco e la mod base, quindi avviare la campagna VR almeno una volta e verificarne il funzionamento.
 
-- [Installer ufficiale v1.2.12](https://github.com/CircuitLord/CircuitLordVRModInstaller/releases/tag/v1.2.12)
-- [Pacchetto ufficiale Titanfall2VR 1.0.25](https://github.com/CircuitLord/CircuitLordVRModInstaller/releases/download/mod-packages/Titanfall2VR-1.0.25.zip)
-- [Manifest ufficiale di riferimento](https://github.com/CircuitLord/CircuitLordVRModInstaller/blob/v1.2.12/manifest-v3.json)
+Per la mod base e il suo installer usare esclusivamente il **[repository GitHub dell'autore](https://github.com/CircuitLord/CircuitLordVRModInstaller)**, nella sua sezione Releases. Non sono ospitati o allegati in questo progetto.
 
 Il patcher verifica anche l'hash SHA-256 esatto della DLL e dei due modelli originali. Se i file sono diversi, si ferma invece di provare a modificarli. **Non è compatibile automaticamente con altre versioni, beta o DLL già modificate.**
 
@@ -30,7 +32,7 @@ Il patcher verifica anche l'hash SHA-256 esatto della DLL e dei due modelli orig
 
 1. Scaricare questo progetto con **Code → Download ZIP** ed estrarlo completamente.
 2. Chiudere Titanfall 2.
-3. Eseguire **Install.cmd** e incollare il percorso della cartella che contiene `Titanfall2.exe`.
+3. Eseguire **Install.cmd (il nostro patcher, non l'installer di CircuitLord)** e incollare il percorso della cartella che contiene `Titanfall2.exe`.
 4. Attendere il messaggio di completamento, poi avviare il gioco tramite il consueto launcher VR.
 
 Richiede Windows 10/11 **x64**, PowerShell 5.1 o successivo e una connessione Internet al primo avvio. Non serve installare Python o Node.js a livello di sistema: lo script scarica copie portabili e librerie open source, con versioni e checksum bloccati, nella cartella locale dell'utente. Non modifica il PATH di Windows e non richiede normalmente privilegi di amministratore.
@@ -59,7 +61,7 @@ Non cancellare la cartella di backup prima del ripristino. Le copie portabili de
 
 Questo repository contiene **codice del patcher, istruzioni, checksum e documentazione**. Non contiene la DLL della mod VR, eseguibili della mod, modelli del gioco, texture o archivi VPK, né completi né modificati.
 
-L'installer legge la DLL e gli archivi VPK già presenti sul PC dell'utente, genera le modifiche sul posto e crea backup esclusivamente locali. Non scarica la mod VR o i modelli da questo repository. Non caricare su GitHub i file generati, i backup o le cartelle temporanee.
+Il nostro patcher legge la DLL e gli archivi VPK già presenti sul PC dell'utente, genera le modifiche sul posto e crea backup esclusivamente locali. Non scarica l'installer di CircuitLord, la sua mod VR o i modelli, da questo repository o da altri siti. I soli download automatici sono strumenti open source elencati in `runtime-lock.json`. Non caricare su GitHub i file generati, i backup o le cartelle temporanee.
 
 La ricarica automatica modifica tre chiamate della DLL compatibile. La modalità solo mani viene generata dai due modelli locali del pilota; posizioni e pesi dei soli bordi dei polsi vengono rifiniti per mantenerne la chiusura durante l'animazione.
 
