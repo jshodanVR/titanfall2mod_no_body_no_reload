@@ -1,0 +1,18 @@
+{
+  "python": {
+    "sha256": "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3",
+    "url": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip"
+  },
+  "numpy": {
+    "sha256": "86945f2ee6d10cdfd67bcb4069c1662dd711f7e2a4343db5cecec06b87cf31aa",
+    "url": "https://files.pythonhosted.org/packages/2d/57/8aeaf160312f7f489dea47ab61e430b5cb051f59a98ae68b7133ce8fa06a/numpy-2.3.5-cp312-cp312-win_amd64.whl"
+  },
+  "node": {
+    "sha256": "21c2d9735c80b8f86dab19305aa6a9f6f59bbc808f68de3eef09d5832e3bfbbd",
+    "url": "https://nodejs.org/dist/v22.16.0/node-v22.16.0-win-x64.zip"
+  },
+  "vpk": {
+    "sha256": "209c5a6f675418c61afdf91dc0f68dbeedb9e5eb90f433a829e167fd93b80267",
+    "url": "https://github.com/barnabwhy/TFVPKTool/releases/download/0.3.1/tfvpktool_v0.3.1.zip"
+  }
+}

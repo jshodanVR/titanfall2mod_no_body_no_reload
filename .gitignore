@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.runtime/
+runtime/
+*.zip
+*.dll
+*.exe
+*.mdl
+*.vpk
+*.bak
+hands_models/
+hands_capped/
+hands_refined/
+preview*.json
+topology-*.json
