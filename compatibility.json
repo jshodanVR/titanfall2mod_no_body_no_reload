@@ -1,15 +1,27 @@
 {
   "project": "titanfall2mod_no_body_no_reload",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "required_mod": "CircuitLord Titanfall2VR",
-  "required_mod_version": "1.0.25",
-  "installer_reference_version": "1.2.12",
-  "dll_original_sha256": "9a555fe9f6fc19bd3ab3f81459643aaaa2c9f55350510d4db3917c3085818450",
-  "dll_patched_sha256": "d8e52da0ad100701afafb502af270034775f5fb8627dfae584407b12f3b7d85a",
+  "required_mod_version": "1.0.29",
+  "installer_reference_version": "1.2.14",
+  "dll_original_sha256": "9b0d00ed4e6dbfbea2e1f860dfd9827fecb60e6a76edf1ea7872d0dca97ccb2a",
+  "dll_patched_sha256": "3b9eb4aa85899e50075bb6a75337a6470b90feb1388531e0b1a46a03b33f3b6a",
   "reload_calls": [
-    {"file_offset": 260710, "rva": 263782, "target_rva": 289984},
-    {"file_offset": 260792, "rva": 263864, "target_rva": 289984},
-    {"file_offset": 261548, "rva": 264620, "target_rva": 293520}
+    {
+      "file_offset": 269030,
+      "rva": 272102,
+      "target_rva": 298368
+    },
+    {
+      "file_offset": 269112,
+      "rva": 272184,
+      "target_rva": 298368
+    },
+    {
+      "file_offset": 269868,
+      "rva": 272940,
+      "target_rva": 301904
+    }
   ],
   "models": {
     "pov_mlt_hero_jack.mdl": {
@@ -19,6 +31,52 @@
     "pov_mlt_hero_jack_rifleman.mdl": {
       "original_sha256": "8a9e4bd3a496e6c6b6d3ea8e7da1f5e9451d0f66f23b8a67dc56dec1770f45db",
       "patched_sha256": "fb5b5a8d4d29f3739400c7d32615cfa92f9cefdc79e956bcc64898f0f811d3a3"
+    }
+  },
+  "supported_builds": {
+    "1.0.25": {
+      "dll_original_sha256": "9a555fe9f6fc19bd3ab3f81459643aaaa2c9f55350510d4db3917c3085818450",
+      "dll_patched_sha256": "d8e52da0ad100701afafb502af270034775f5fb8627dfae584407b12f3b7d85a",
+      "reload_calls": [
+        {
+          "file_offset": 260710,
+          "rva": 263782,
+          "target_rva": 289984
+        },
+        {
+          "file_offset": 260792,
+          "rva": 263864,
+          "target_rva": 289984
+        },
+        {
+          "file_offset": 261548,
+          "rva": 264620,
+          "target_rva": 293520
+        }
+      ],
+      "installer_reference_version": "1.2.12"
+    },
+    "1.0.29": {
+      "dll_original_sha256": "9b0d00ed4e6dbfbea2e1f860dfd9827fecb60e6a76edf1ea7872d0dca97ccb2a",
+      "dll_patched_sha256": "3b9eb4aa85899e50075bb6a75337a6470b90feb1388531e0b1a46a03b33f3b6a",
+      "reload_calls": [
+        {
+          "file_offset": 269030,
+          "rva": 272102,
+          "target_rva": 298368
+        },
+        {
+          "file_offset": 269112,
+          "rva": 272184,
+          "target_rva": 298368
+        },
+        {
+          "file_offset": 269868,
+          "rva": 272940,
+          "target_rva": 301904
+        }
+      ],
+      "installer_reference_version": "1.2.14"
     }
   }
 }

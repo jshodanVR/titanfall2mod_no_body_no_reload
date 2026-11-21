@@ -29,11 +29,14 @@ try {
     if ($Action -ne 'uninstall') {
         $baseManifest = Join-Path $GamePath '.circuitlord-vr-mods\Titanfall2VR.json'
         if (-not (Test-Path -LiteralPath $baseManifest)) { throw 'Install the official CircuitLord Titanfall2VR base mod first.' }
-        if ((Get-Content -Raw -LiteralPath $baseManifest | ConvertFrom-Json).version -ne $config.required_mod_version) { throw 'Required BASE MOD: Titanfall2VR 1.0.25. Installer 1.2.12 is a separate version number.' }
+        $baseVersion = [string](Get-Content -Raw -LiteralPath $baseManifest | ConvertFrom-Json).version
+        $selectedBuild = $config.supported_builds.PSObject.Properties[$baseVersion]
+        if (-not $selectedBuild) { throw 'Supported stable BASE MOD versions: Titanfall2VR 1.0.25 and 1.0.29. Installer version numbers are separate.' }
+        $build = $selectedBuild.Value
         $dll = Join-Path $GamePath 'TF2VR\plugins\Titanfall2VR.dll'
         if (-not (Test-Path -LiteralPath $dll)) { throw 'The base VR DLL was not found.' }
         $hash = (Get-FileHash -LiteralPath $dll).Hash
-        if ($hash -notin @($config.dll_original_sha256, $config.dll_patched_sha256)) { throw 'Unsupported VR DLL. Restore the official Titanfall2VR 1.0.25 files first.' }
+        if ($hash -notin @($build.dll_original_sha256, $build.dll_patched_sha256)) { throw ('Unsupported VR DLL for Titanfall2VR ' + $baseVersion + '. Restore the official base mod files first.') }
     }
     New-Item -ItemType Directory -Path $RuntimeRoot -Force | Out-Null
     $lock = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'runtime-lock.json') | ConvertFrom-Json

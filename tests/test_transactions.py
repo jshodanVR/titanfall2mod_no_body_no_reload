@@ -98,4 +98,61 @@ class Transactions(unittest.TestCase):
         meta.write_text(json.dumps({'version':'1.0.25'}))
         patcher.validate_game(self.game)
 
+    def test_selects_both_stable_versions_and_rejects_beta(self):
+        self.assertEqual(patcher.build_config('1.0.25')['dll_original_sha256'],
+                         patcher.CONFIG['supported_builds']['1.0.25']['dll_original_sha256'])
+        self.assertEqual(patcher.build_config('1.0.29')['dll_original_sha256'],
+                         patcher.CONFIG['supported_builds']['1.0.29']['dll_original_sha256'])
+        with self.assertRaisesRegex(ValueError,'Supported stable'):
+            patcher.build_config('1.0.31')
+
+    def setup_previous_build(self):
+        old_original=b'synthetic old stable original'
+        old_patched=b'synthetic old stable patched'
+        old_config=copy.deepcopy(self.config)
+        old_config.update(required_mod_version='1.0.25',version='1.0.1',
+                          dll_original_sha256=patcher.digest(old_original),
+                          dll_patched_sha256=patcher.digest(old_patched))
+        profiles={
+            '1.0.25':{k:old_config[k]for k in ('dll_original_sha256','dll_patched_sha256','reload_calls')},
+            '1.0.29':{k:self.config[k]for k in ('dll_original_sha256','dll_patched_sha256','reload_calls')}
+        }
+        self.config['supported_builds']=profiles;old_config['supported_builds']=profiles
+        old_files=dict(self.files)
+        old_files[str(patcher.DLL)]=old_patched
+        old_files[str(patcher.MOD/'mod.json')]=patcher.make_mod_json(old_config)
+        (self.game/patcher.DLL).write_bytes(old_original)
+        patcher.install_prepared(self.game,old_files,old_original,old_config)
+        return old_original,old_files
+
+    def test_base_update_upgrade_archives_old_backup_and_restores_new_build(self):
+        old_original,_=self.setup_previous_build()
+        (self.game/patcher.DLL).write_bytes(self.original) # official base mod update
+        self.install()
+        self.assertEqual((self.game/patcher.BACKUP/'original-1.0.25.dll').read_bytes(),old_original)
+        self.assertEqual((self.game/patcher.BACKUP/'original.dll').read_bytes(),self.original)
+        patcher.uninstall(self.game,self.config)
+        self.assertEqual((self.game/patcher.DLL).read_bytes(),self.original)
+
+    def test_upgrade_failure_restores_prior_models_and_updated_base_dll(self):
+        old_original,old_files=self.setup_previous_build()
+        (self.game/patcher.DLL).write_bytes(self.original)
+        real_write=patcher.atomic_write;failed=False
+        def fail_once(path,data):
+            nonlocal failed
+            if not failed and path==self.game/patcher.DLL and data==self.patched:
+                failed=True;raise OSError('upgrade write error')
+            real_write(path,data)
+        with patch.object(patcher,'atomic_write',side_effect=fail_once):
+            with self.assertRaisesRegex(OSError,'upgrade write'):self.install()
+        self.assertEqual((self.game/patcher.DLL).read_bytes(),self.original)
+        self.assertEqual((self.game/patcher.BACKUP/'original.dll').read_bytes(),old_original)
+        for name,value in old_files.items():
+            if name!=str(patcher.DLL):self.assertEqual((self.game/name).read_bytes(),value)
+
+    def test_uninstall_uses_original_backup_build_instead_of_preferred_version(self):
+        old_original,_=self.setup_previous_build()
+        patcher.uninstall(self.game,self.config)
+        self.assertEqual((self.game/patcher.DLL).read_bytes(),old_original)
+
 if __name__=='__main__':unittest.main()

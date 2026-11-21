@@ -26,6 +26,29 @@ def atomic_write(path, data):
 def allowed_targets(config=CONFIG):
     return {str(DLL), str(MOD / 'mod.json')} | {str(MOD / MODEL_PATH / n) for n in config['models']}
 
+def build_config(version, config=CONFIG):
+    profiles = config.get('supported_builds', {})
+    if profiles:
+        if version not in profiles:
+            raise ValueError('Supported stable BASE MOD versions: ' + ', '.join(profiles) + ' (not installer versions).')
+        return dict(config, **profiles[version], required_mod_version=version)
+    if version != config['required_mod_version']:
+        raise ValueError('Required BASE MOD: Titanfall2VR ' + config['required_mod_version'])
+    return config
+
+def backup_config(backup, config=CONFIG):
+    if digest(backup) == config['dll_original_sha256']: return config
+    for version in config.get('supported_builds', {}):
+        candidate = build_config(version, config)
+        if digest(backup) == candidate['dll_original_sha256']: return candidate
+    raise ValueError('Original DLL backup is invalid.')
+
+def remove_empty_mod_dirs(game):
+    for directory in (game / MOD / MODEL_PATH, game / MOD / 'mod/models/weapons',
+                      game / MOD / 'mod/models', game / MOD / 'mod', game / MOD):
+        try: directory.rmdir()
+        except OSError: pass
+
 def validate_game(game, config=CONFIG):
     if not any((game / exe).is_file() for exe in ('Titanfall2.exe', 'Titanfall2_trial.exe')):
         raise ValueError('Select the Titanfall 2 folder containing Titanfall2.exe.')
@@ -33,14 +56,14 @@ def validate_game(game, config=CONFIG):
     if not manifest.is_file():
         raise ValueError('Install the base CircuitLord Titanfall2VR mod first, using its official installer.')
     record = json.loads(manifest.read_text(encoding='utf-8-sig'))
-    if str(record.get('version')) != config['required_mod_version']:
-        raise ValueError('Required BASE MOD: CircuitLord Titanfall2VR 1.0.25 (not the installer version).')
+    selected = build_config(str(record.get('version')), config)
     if not (game / DLL).is_file():
         raise ValueError('The base mod TF2VR/plugins/Titanfall2VR.dll is missing.')
+    return selected
 
 def patch_dll(original, config=CONFIG):
     if digest(original) != config['dll_original_sha256']:
-        raise ValueError('Unsupported or already modified VR DLL. Only the exact Titanfall2VR 1.0.25 build is supported.')
+        raise ValueError('Unsupported or already modified VR DLL for Titanfall2VR ' + config['required_mod_version'] + '.')
     result = bytearray(original)
     for call in config['reload_calls']:
         offset = call['file_offset']
@@ -81,18 +104,37 @@ def make_mod_json(config=CONFIG):
 def install_prepared(game, prepared, original_dll, config=CONFIG):
     if set(prepared) != allowed_targets(config): raise ValueError('Unexpected installation targets.')
     if digest(original_dll) != config['dll_original_sha256']: raise ValueError('Original backup does not match.')
-    if (game / MOD).exists(): raise ValueError('The add-on folder already exists; uninstall the previous add-on first.')
     receipt_path = game / BACKUP / 'receipt.json'
+    previous_receipt = receipt_path.read_bytes() if receipt_path.exists() else None
+    owned_install = False
     if receipt_path.exists():
         old = json.loads(receipt_path.read_text())
-        if old.get('state') != 'uninstalled': raise ValueError('An installation or recovery receipt already exists. Run Uninstall first.')
+        if old.get('project') != PROJECT or set(old.get('files', {})) != allowed_targets(config):
+            raise ValueError('Invalid existing installation receipt.')
+        if old.get('state') == 'installed':
+            for relative, expected in old['files'].items():
+                if relative == str(DLL): continue
+                path = game / relative
+                if not path.is_file() or digest(path.read_bytes()) != expected:
+                    raise ValueError('Existing add-on file changed; upgrade cancelled: ' + relative)
+            owned_install = True
+        elif old.get('state') != 'uninstalled':
+            raise ValueError('An incomplete recovery receipt exists. Run Uninstall first.')
+    if (game / MOD).exists() and not owned_install:
+        raise ValueError('The add-on folder already exists and is not owned by a valid installation receipt.')
     backup_file = game / BACKUP / 'original.dll'
-    if backup_file.exists() and digest(backup_file.read_bytes()) != config['dll_original_sha256']:
-        raise ValueError('A different backup exists; it will not be overwritten.')
+    previous_backup = backup_file.read_bytes() if backup_file.exists() else None
+    if previous_backup is not None and digest(previous_backup) != config['dll_original_sha256']:
+        previous_config = backup_config(previous_backup, config)
+        archive = game / BACKUP / ('original-' + previous_config['required_mod_version'] + '.dll')
+        if archive.exists() and archive.read_bytes() != previous_backup:
+            raise ValueError('A different archived backup exists; it will not be overwritten.')
+        atomic_write(archive, previous_backup)
     if digest((game / DLL).read_bytes()) != config['dll_original_sha256']:
         raise ValueError('The installed DLL changed during preparation.')
+    previous_targets = {p:(game / p).read_bytes() if (game / p).exists() else None for p in prepared}
     atomic_write(backup_file, original_dll)
-    receipt = {'project': PROJECT, 'version': config['version'], 'state': 'prepared',
+    receipt = {'project': PROJECT, 'version': config['version'], 'base_mod_version':config['required_mod_version'], 'state': 'prepared',
                'files': {p: digest(b) for p,b in prepared.items()}}
     atomic_write(receipt_path, json.dumps(receipt, indent=2).encode())
     try:
@@ -104,7 +146,15 @@ def install_prepared(game, prepared, original_dll, config=CONFIG):
         receipt['state'] = 'installed'
         atomic_write(receipt_path, json.dumps(receipt, indent=2).encode())
     except Exception:
-        uninstall(game, config)
+        for relative, previous in previous_targets.items():
+            if previous is None: (game / relative).unlink(missing_ok=True)
+            else: atomic_write(game / relative, previous)
+        if previous_backup is not None: atomic_write(backup_file, previous_backup)
+        if previous_receipt is not None: atomic_write(receipt_path, previous_receipt)
+        else:
+            receipt['state'] = 'uninstalled'
+            atomic_write(receipt_path, json.dumps(receipt, indent=2).encode())
+        remove_empty_mod_dirs(game)
         raise
 
 def uninstall(game, config=CONFIG):
@@ -115,7 +165,7 @@ def uninstall(game, config=CONFIG):
         raise ValueError('Invalid recovery receipt. No files changed.')
     if receipt.get('state') == 'uninstalled': return
     backup = (game / BACKUP / 'original.dll').read_bytes()
-    if digest(backup) != config['dll_original_sha256']: raise ValueError('Original DLL backup is invalid.')
+    config = backup_config(backup, config)
     # Preflight every target before making any changes: refuse later edits/updates.
     for relative, expected in receipt['files'].items():
         path = game / relative
@@ -128,10 +178,7 @@ def uninstall(game, config=CONFIG):
     for relative in receipt['files']:
         if relative != str(DLL): (game / relative).unlink(missing_ok=True)
     # Remove empty directories only; never recursively remove user files.
-    for directory in (game / MOD / MODEL_PATH, game / MOD / 'mod/models/weapons',
-                      game / MOD / 'mod/models', game / MOD / 'mod', game / MOD):
-        try: directory.rmdir()
-        except OSError: pass
+    remove_empty_mod_dirs(game)
     receipt['state'] = 'uninstalled'
     atomic_write(receipt_path, json.dumps(receipt, indent=2).encode())
 
@@ -144,23 +191,25 @@ def main():
     args = p.parse_args(); game = args.game.expanduser().resolve()
     if args.action == 'uninstall':
         uninstall(game); print('Add-on removed. Original VR DLL restored.'); return
-    validate_game(game)
+    config = validate_game(game)
     receipt_path = game / BACKUP / 'receipt.json'
     if receipt_path.exists() and json.loads(receipt_path.read_text()).get('state') == 'installed':
         receipt = json.loads(receipt_path.read_text())
         if set(receipt.get('files', {})) != allowed_targets(): raise ValueError('Invalid installation receipt.')
-        if all((game / name).is_file() and digest((game / name).read_bytes()) == value for name,value in receipt['files'].items()):
+        if (digest((game / DLL).read_bytes()) == config['dll_patched_sha256'] and
+            all((game / name).is_file() and digest((game / name).read_bytes()) == value for name,value in receipt['files'].items())):
             print('This add-on is already installed and all files match.'); return
-        raise ValueError('An installed file changed; run Uninstall before proceeding.')
-    original = (game / DLL).read_bytes(); patched = patch_dll(original)
-    if args.action == 'check': print('Compatible base mod: Titanfall2VR 1.0.25; exact DLL verified.'); return
+        if digest((game / DLL).read_bytes()) != config['dll_original_sha256']:
+            raise ValueError('An installed file changed; no automatic upgrade can be applied.')
+    original = (game / DLL).read_bytes(); patched = patch_dll(original, config)
+    if args.action == 'check': print('Compatible base mod: Titanfall2VR ' + config['required_mod_version'] + '; exact DLL verified.'); return
     if not args.node or not args.vpk_library: raise ValueError('Node and the VPK reader paths are required by the installer.')
     with tempfile.TemporaryDirectory(prefix='tf2p-extract-') as temp:
         run([str(args.node), str(ROOT/'src/read_models.cjs'), str(game/'vpk'), temp, str(args.vpk_library.resolve())])
         originals = {n:(Path(temp)/n).read_bytes() for n in CONFIG['models']}
-        prepared = generate_models(originals)
-    prepared[str(DLL)] = patched; prepared[str(MOD/'mod.json')] = make_mod_json()
-    install_prepared(game, prepared, original)
+        prepared = generate_models(originals, config)
+    prepared[str(DLL)] = patched; prepared[str(MOD/'mod.json')] = make_mod_json(config)
+    install_prepared(game, prepared, original, config)
     print('Installed: automatic game reload and hands-only models with closed, refined wrists.')
     print('Local backup: ' + str(game / BACKUP))
 
